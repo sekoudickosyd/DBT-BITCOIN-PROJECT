@@ -1,0 +1,44 @@
+name: dbt CI Test
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  dbt-run:
+    runs-on: ubuntu-latest
+    environment: DBT_BTC
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12.10'
+
+      - name: Install dbt
+        run: |
+          cd ./BTC 
+          uv sync 
+
+      - name: Set up dbt profile and private key
+        run: |
+          mkdir -p ~/.dbt
+          echo "$DBT_PROFILES_YML" > ~/.dbt/profiles.yml
+          echo "$DBT_PRIVATE_KEY" > ~/.dbt/rsa_key
+          chmod 600 ~/.dbt/rsa_key
+        env:
+          DBT_PROFILES_YML: ${{ secrets.DBT_PROFILES_YML }}
+          DBT_PRIVATE_KEY: ${{ secrets.DBT_PRIVATE_KEY }}
+
+      - name: Install dbt deps
+        run: uv run dbt deps
+
+      - name: Run dbt debug
+        run: uv run dbt debug
+
+      - name: Run dbt
+        run: uv run dbt run
